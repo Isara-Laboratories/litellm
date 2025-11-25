@@ -51,6 +51,20 @@ async def anthropic_response(  # noqa: PLR0915
 
     request_data = await _read_request_body(request=request)
     data: dict = {**request_data}
+
+    # Strip beta query parameter for Bedrock - it doesn't support query params
+    # Beta features for Bedrock are handled via anthropic_beta in the request body
+    if "beta" in request.query_params and data.get("model"):
+        model_str = str(data.get("model", "")).lower()
+        # Only forward beta query param to Anthropic Direct API, not Bedrock
+        if "bedrock" in model_str:
+            verbose_proxy_logger.debug(
+                f"Stripping beta query parameter for Bedrock model: {data.get('model')}"
+            )
+        else:
+            # For non-Bedrock (e.g., Anthropic Direct), preserve beta behavior
+            data["beta"] = request.query_params["beta"]
+
     try:
         data["model"] = (
             general_settings.get("completion_model", None)  # server default
