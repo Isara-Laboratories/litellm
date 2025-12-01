@@ -481,7 +481,29 @@ except ImportError:
 
 server_root_path = os.getenv("SERVER_ROOT_PATH", "")
 _license_check = LicenseCheck()
-premium_user: bool = _license_check.is_premium()
+_force_premium_env = (
+    os.getenv("LITELLM_FORCE_PREMIUM", "").lower()
+    in {"true", "1", "yes", "y", "on"}
+)
+
+
+def _resolve_premium_flag() -> bool:
+    """
+    Helper to short-circuit premium checks for debugging.
+
+    When LITELLM_FORCE_PREMIUM is truthy, we skip license validation and treat the
+    instance as premium so enterprise-gated tooling like Prometheus metrics can be
+    exercised locally.
+    """
+    if _force_premium_env:
+        verbose_proxy_logger.warning(
+            "LITELLM_FORCE_PREMIUM is enabled; skipping license verification and treating instance as premium."
+        )
+        return True
+    return _license_check.is_premium()
+
+
+premium_user: bool = _resolve_premium_flag()
 premium_user_data: Optional[
     "EnterpriseLicenseData"
 ] = _license_check.airgapped_license_data
@@ -615,7 +637,7 @@ async def proxy_startup_event(app: FastAPI):
         )
     )
     if premium_user is False:
-        premium_user = _license_check.is_premium()
+        premium_user = _resolve_premium_flag()
 
     ## CHECK MASTER KEY IN ENVIRONMENT ##
     master_key = get_secret_str("LITELLM_MASTER_KEY")
@@ -1950,7 +1972,7 @@ class ProxyConfig:
             # check if litellm_license in general_settings
             if "LITELLM_LICENSE" in environment_variables:
                 _license_check.license_str = os.getenv("LITELLM_LICENSE", None)
-                premium_user = _license_check.is_premium()
+                premium_user = _resolve_premium_flag()
         return
 
     async def load_config(  # noqa: PLR0915
@@ -2385,7 +2407,7 @@ class ProxyConfig:
             # check if litellm_license in general_settings
             if "litellm_license" in general_settings:
                 _license_check.license_str = general_settings["litellm_license"]
-                premium_user = _license_check.is_premium()
+                premium_user = _resolve_premium_flag()
 
         router_params: dict = {
             "cache_responses": litellm.cache

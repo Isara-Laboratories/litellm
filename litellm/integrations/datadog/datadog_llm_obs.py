@@ -391,6 +391,8 @@ class DataDogLLMObsLogger(DataDogLogger, CustomBatchLogger):
             CallTypes.generate_content_stream.value,
             CallTypes.agenerate_content_stream.value,
             CallTypes.anthropic_messages.value,
+            CallTypes.responses.value,
+            CallTypes.aresponses.value,
         ]:
             return "llm"
 
@@ -416,8 +418,6 @@ class DataDogLLMObsLogger(DataDogLogger, CustomBatchLogger):
             CallTypes.aretrieve_batch.value,
             CallTypes.retrieve_fine_tuning_job.value,
             CallTypes.aretrieve_fine_tuning_job.value,
-            CallTypes.responses.value,
-            CallTypes.aresponses.value,
             CallTypes.alist_input_items.value,
         ]:
             return "retrieval"
