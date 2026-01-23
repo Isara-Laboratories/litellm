@@ -1,21 +1,22 @@
-# Base image for building
-ARG LITELLM_BUILD_IMAGE=cgr.dev/chainguard/python:latest-dev
+# Base image for building (use python:3.12-slim for stability)
+ARG LITELLM_BUILD_IMAGE=python:3.12-slim
 
 # Runtime image
-ARG LITELLM_RUNTIME_IMAGE=cgr.dev/chainguard/python:latest-dev
+ARG LITELLM_RUNTIME_IMAGE=python:3.12-slim
 # Builder stage
 FROM $LITELLM_BUILD_IMAGE AS builder
 
 # Set the working directory to /app
 WORKDIR /app
 
-USER root
-
 # Install build dependencies
-RUN apk add --no-cache gcc python3-dev openssl openssl-dev
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    python3-dev \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-
-RUN pip install --upgrade pip>=24.3.1 && \
+RUN pip install --upgrade pip && \
     pip install build
 
 # Copy the current directory contents into the container at /app
@@ -44,16 +45,19 @@ RUN pip install PyJWT==2.9.0 --no-cache-dir
 # Runtime stage
 FROM $LITELLM_RUNTIME_IMAGE AS runtime
 
-# Ensure runtime stage runs as root
-USER root
+WORKDIR /app
 
 # Install runtime dependencies
-RUN apk add --no-cache openssl tzdata
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssl \
+    tzdata \
+    supervisor \
+    libatomic1 \
+    && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip to fix CVE-2025-8869
-RUN pip install --upgrade pip>=24.3.1
+# Upgrade pip
+RUN pip install --upgrade pip
 
-WORKDIR /app
 # Copy the current directory contents into the container at /app
 COPY . .
 RUN ls -la /app
@@ -75,7 +79,6 @@ RUN chmod +x docker/prod_entrypoint.sh
 
 EXPOSE 4000/tcp
 
-RUN apk add --no-cache supervisor
 COPY docker/supervisord.conf /etc/supervisord.conf
 
 ENTRYPOINT ["docker/prod_entrypoint.sh"]

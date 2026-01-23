@@ -38,6 +38,8 @@ from litellm.types.utils import (
 
 class DataDogLLMObsLogger(DataDogLogger, CustomBatchLogger):
     def __init__(self, **kwargs):
+        # ISARA: Disabled to reduce Datadog LLM Observability billing
+        raise Exception("DataDogLLMObsLogger is disabled in this deployment")
         try:
             verbose_logger.debug("DataDogLLMObs: Initializing logger")
             if os.getenv("DD_API_KEY", None) is None:

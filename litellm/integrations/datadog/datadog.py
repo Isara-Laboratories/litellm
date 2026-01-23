@@ -64,6 +64,8 @@ class DataDogLogger(
         `DD_API_KEY` - your datadog api key
         `DD_SITE` - your datadog site, example = `"us5.datadoghq.com"`
         """
+        # ISARA: Disabled to reduce Datadog billing
+        raise Exception("DataDogLogger is disabled in this deployment")
         try:
             verbose_logger.debug("Datadog: in init datadog logger")
             # check if the correct env variables are set
